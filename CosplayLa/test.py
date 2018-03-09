@@ -1,5 +1,4 @@
-from Support import *
-from CosplayLa import *
+from .CosplayLa import *
 import os 
 
 
