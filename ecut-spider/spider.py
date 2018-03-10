@@ -60,4 +60,4 @@ if __name__ == "__main__":
     ticket = spider.get_ticket()
     spider.do(ticket)
     # 东华理工教务系统爬虫实例
-    # 26 行的 需要自行添加
+    # 26 行的学号 密码 需要自行添加
