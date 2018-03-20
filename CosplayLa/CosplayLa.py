@@ -12,7 +12,7 @@ def parser(content):
     for item in items:
         ret.append("http://cosplay.la/" + item.a.attrs['href'])
 
-    return ret # 图集的地址列表
+    return ret  # 图集的地址列表
 
 
 def parser2(content):
@@ -20,9 +20,9 @@ def parser2(content):
     div = soup.find_all('div', attrs={'class': 'talk_pic hauto'})[0]
     ret = []
 
-    for item in div.find_all('p', attrs={'class':'mbottom10'}):
+    for item in div.find_all('p', attrs={'class': 'mbottom10'}):
         ret.append(item.a.img.attrs['src'])
-    return ret # 图片地址的列表
+    return ret  # 图片地址的列表
 
 
 def getPageList(content):
@@ -34,7 +34,7 @@ def getPageList(content):
     for i in range(int(page) + 1):
         pageList.append("http://cosplay.la/photo/index/0-0-{}".format(i))
 
-    return pageList # 所有页面的列表
+    return pageList  # 所有页面的列表
 
 
 def getName(url):
@@ -43,25 +43,25 @@ def getName(url):
 
 
 def main():
-    root_url = "http://cosplay.la/photo" 
+    root_url = "http://cosplay.la/photo"
 
     html = DownloadPage(root_url)
 
     pages = getPageList(html)
-    for url in pages[:10]: # 前十页
+    for url in pages[:10]:  # 前十页
         html = DownloadPage(url)
         page_list = parser(html)
 
-        for page in page_list: #一页20条
+        for page in page_list:  # 一页20条
             html = DownloadPage(page)
 
-            for img in parser2(html): # 一条多个图片
+            for img in parser2(html):  # 一条多个图片
                 try:
                     filepath = os.path.join(os.getcwd(), 'images', getName(img))
                     DownloadFile(img, filepath)
                 except OSError as e:
                     print(e)
 
-               
+
 if __name__ == "__main__":
     main()

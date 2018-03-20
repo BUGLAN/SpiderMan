@@ -4,8 +4,7 @@ from download import *
 
 class Spider:
 
-    def __init__(self):
-        self.search_url = "http://www.biquge5200.com/modules/article/search.php"
+    search_url = "http://www.biquge5200.com/modules/article/search.php"
 
     @staticmethod
     def search(keyword):
