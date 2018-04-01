@@ -5,29 +5,35 @@ import requests
 import re
 import os
 
+url_queue = Queue()
+lock = threading.Lock()
+
 
 def get_logger():
-    logger = logging.getLogger("CosplayLa2")
+    logger = logging.getLogger("CosplayLa3")
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler('CosplayLa2.log', encoding='utf8')
+    handler = logging.FileHandler('CosplayLa3.log', encoding='utf8')
     formatter = logging.Formatter('%(asctime)s - %(threadName)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger
 
 
+logger = get_logger()
+
+
 class ThreadHtml(threading.Thread):
-    def __init__(self, thread_id, logger, page, ):
+    def __init__(self, thread_id, logger, page, queue):
         threading.Thread.__init__(self)
         self.thread_id = thread_id
         self.logger = logger
         self.page = page
-        self.queue = None
+        self.queue = queue
 
     def run(self):
         # 这个程序爬取url并将其存到队列里面
         # 抓取每一页的url
-        cosplayla = CosplayLa(logger=self.logger)
+        cosplayla = CosplayLa(logger=self.logger, queue=url_queue)
         cosplayla.get_urls(page=self.page)
         while True:
             try:
@@ -35,7 +41,6 @@ class ThreadHtml(threading.Thread):
             except IndexError as e:
                 logger.error("列表为空: {}".format(e))
                 break
-        self.queue = cosplayla.queue
         print('end {}'.format(self.thread_id))
         logger.info('end {}'.format(self.thread_id))
 
@@ -48,7 +53,7 @@ class ThreadUrl(threading.Thread):
         self.queue = queue
 
     def run(self):
-        cosplayla = CosplayLa(logger=self.logger)
+        cosplayla = CosplayLa(logger=self.logger, queue=url_queue)
         while True:
             try:
                 cosplayla.down(self.queue)
@@ -59,12 +64,12 @@ class ThreadUrl(threading.Thread):
 
 
 class CosplayLa:
-    def __init__(self, logger):
+    def __init__(self, logger, queue):
         self._root_url = 'http://www.cosplayla.com/picture-4/'
         self.logger = logger
         self.urls = []
         self.download = DownLoad(logger)
-        self.queue = Queue()
+        self.queue = queue
 
     def get_urls(self, page):
         context = self.download.download_page(self._root_url, {"page": page})
@@ -83,36 +88,22 @@ class CosplayLa:
             if url == '/picup/':
                 urls.remove(url)
             else:
-                self.queue.put(url)
+                lock.acquire()
+                try:
+                    self.queue.put(url)
+                finally:
+                    lock.release()
                 self.logger.info("爬取了 {}".format(url))
         return self.queue
 
     def down(self, queue):
-        url = queue.get()
+        lock.acquire()
+        try:
+            url = queue.get()
+        finally:
+            lock.release()
         self.download.download_file('http://www.cosplayla.com' + url)
         self.logger.info('下载{filename}成功'.format(filename=url.split('/')[-1]))
-
-    def start(self):
-        threads = [ThreadHtml(thread_id=i, logger=self.logger, page=i) for i in range(1, 11)]
-        for t in threads:
-            print("start {}".format(t.thread_id))
-            t.start()
-        for t in threads:
-            t.join()
-        queues = [t.queue for t in threads]
-
-        # 开启10个线程
-
-        ts = [ThreadUrl(thread_id="queue" + str(n), logger=self.logger, queue=queue)
-              for n, queue in enumerate(queues)]
-
-        for t in ts:
-            t.start()
-
-        for t in ts:
-            t.join()
-
-        logger.info("MainThread exit")
 
 
 class DownLoad:
@@ -155,7 +146,28 @@ class DownLoad:
                 break
 
 
+def start():
+    threads = [ThreadHtml(thread_id=i, logger=logger, page=i, queue=url_queue) for i in range(1, 11)]
+    for t in threads:
+        print("start {}".format(t.thread_id))
+        t.start()
+    for t in threads:
+        t.join()
+
+    # 开启5个线程
+
+    ts = [ThreadUrl(thread_id="queue" + str(i), logger=logger, queue=url_queue)
+          for i in range(1, 5)]
+
+    for t in ts:
+        t.start()
+
+    for t in ts:
+        t.join()
+
+    logger.info("MainThread exit")
+    print("main thread exit")
+
+
 if __name__ == '__main__':
-    logger = get_logger()
-    cosplayla = CosplayLa(logger)
-    cosplayla.start()
+    start()
