@@ -99,10 +99,10 @@ class CosplayLa:
             t.start()
         for t in threads:
             t.join()
+
         queues = [t.queue for t in threads]
 
         # 开启10个线程
-
         ts = [ThreadUrl(thread_id="queue" + str(n), logger=self.logger, queue=queue)
               for n, queue in enumerate(queues)]
 
@@ -131,7 +131,7 @@ class DownLoad:
                 logger.error("在下载{url}时出现错误: (e)".format(url=url, e=e))
                 n -= 1
             else:
-                r.encoding = r.apparent_encoding
+                # r.encoding = r.apparent_encoding
                 return r.text
 
     def download_file(self, url):
