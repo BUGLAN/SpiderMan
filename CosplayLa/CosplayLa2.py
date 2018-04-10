@@ -143,7 +143,7 @@ class DownLoad:
                 logger.error("在下载{url}时出现错误: (e)".format(url=url, e=e))
                 n -= 1
             else:
-                r.encoding = r.apparent_encoding
+                # r.encoding = r.apparent_encoding
                 path = os.path.join(os.getcwd(), 'images')
                 if not os.path.exists(path):
                     logger.info("目录不存在，创建目录{}".format(path))
