@@ -5,17 +5,28 @@ from concurrent import futures
 
 import requests
 
-headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Appl"
-                         "eWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36"}
+headers = {
+    "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Appl"
+    "eWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36"
+}
 
 
 class PixivSpider:
     base_url = "https://accounts.pixiv.net/login?lang=zh&source=pc&view_type=page&ref=wwwtop_accounts_index"
     login_url = "https://accounts.pixiv.net/api/login"
     # headers = headers
-    data = {"lang": "zh", "pixiv_id": "", "captcha": "", "g_recaptcha_response": "",
-            "password": "", "post_key": "", "source": "pc",
-            "ref": "wwwtop_accounts_index", "return_to": "https://www.pixiv.net/"}
+    data = {
+        "lang": "zh",
+        "pixiv_id": "",
+        "captcha": "",
+        "g_recaptcha_response": "",
+        "password": "",
+        "post_key": "",
+        "source": "pc",
+        "ref": "wwwtop_accounts_index",
+        "return_to": "https://www.pixiv.net/"
+    }
 
     def __init__(self, username, password):
         self.data['pixiv_id'] = username
@@ -25,14 +36,15 @@ class PixivSpider:
 
     def _get_id(self):
         r = self.d.down_html(self.base_url)
-        key = re.search(
-            r'<input type="hidden" name="post_key" value="(.*?)">', r.text).group(1)
+        key = re.search(r'<input type="hidden" name="post_key" value="(.*?)">',
+                        r.text).group(1)
         return key
 
     def login_in(self):
         self.data['post_key'] = self._get_id()
         r = self.d.post_to(self.login_url, data=self.data)
-        print("登陆状态 %s %s" % (r.status_code, 'OK' if r and r.status_code == 200 else ''))
+        print("登陆状态 %s %s" % (r.status_code, 'OK'
+                              if r and r.status_code == 200 else ''))
 
     def _get_tt(self):
         r = self.d.down_html("https://www.pixiv.net/ranking.php?mode=daily")
@@ -48,14 +60,14 @@ class PixivSpider:
         r = self.d.down_html(url, params=params)
         urls = []
         for item in r.json()['contents']:
-            urls.append("https://www.pixiv.net/member_illust.php?mode=medium&illust_id=" + str(item['illust_id']))
+            urls.append(
+                "https://www.pixiv.net/member_illust.php?mode=medium&illust_id="
+                + str(item['illust_id']))
         return urls
 
     def _get_manga(self, url):
         r = self.d.down_html(url)
-        images = re.findall(
-            r'data-src="(.*?)" data-index="\d+">',
-            r.text)
+        images = re.findall(r'data-src="(.*?)" data-index="\d+">', r.text)
         return images
 
     def get_image(self, url):
@@ -67,18 +79,20 @@ class PixivSpider:
             name = re.search(r'<h1 class="title">(.*?)</h1>', r.text).group(1)
             return images, name
         else:
-            image = re.search(r'<img alt="(.*?)" width="\d+" height="\d+" data-src="(.*?)" class="original-image">',
-                              r.text)
+            image = re.search(
+                r'<img alt="(.*?)" width="\d+" height="\d+" data-src="(.*?)" class="original-image">',
+                r.text)
         return image.group(2), image.group(1)
 
-    def down_image(self, referer, url, filename=None):
+    def down_image(self, referer, url, filename=None, path='./images'):
         if filename:
             filename += '.' + url.split('.')[-1]
             if filename in self.images:
                 filename = os.path.basename(url)
         else:
             filename = os.path.basename(url)
-        path = './images'
+        if '\\' in path:
+            path.replace('\\', '-')
         if not os.path.exists(path):
             os.mkdir(path)
         headers['referer'] = referer
@@ -90,7 +104,6 @@ class PixivSpider:
 
 
 class DownLoad:
-
     def __init__(self):
         self.s = requests.Session()
 
@@ -123,8 +136,8 @@ class DownLoad:
         pass
 
 
-"""
-https://www.pixiv.net/ranking.php?mode=daily&p=2&format=json&tt=48e651f09109dd281bd47fc30edec4f3
+"""
+https://www.pixiv.net/ranking.php?mode=daily&p=2&format=json&tt=48e651f09109dd281bd47fc30edec4f3
 """
 
 
@@ -141,7 +154,11 @@ def handle_exc(spider, url):
             spider.down_image(url, image_url, image_name)
         except AttributeError:
             for i, u in enumerate(image_url):
-                spider.down_image(url, u, filename=image_name + '-' + str(i))
+                spider.down_image(
+                    url,
+                    u,
+                    filename=image_name + '-' + str(i),
+                    path='./images/{filename}'.format(filename=image_name))
 
 
 def main(p=1):
@@ -151,12 +168,15 @@ def main(p=1):
             handle_exc(spider, url)
         except Exception as e:
             print('{e} {url} 下载失败'.format(e=e, url=url))
+            f.write(url + '\n')
 
 
 if __name__ == '__main__':
+    f = open('error.txt', 'a')
     t0 = time.time()
-    spider = PixivSpider(username='username', password='password')
+    spider = PixivSpider(username='buglan', password='ls52674364')
     spider.login_in()
     with futures.ThreadPoolExecutor(max_workers=20) as executor:
         executor.map(main, range(1, 11))
     print("total is {}".format(time.time() - t0))
+    f.close()
