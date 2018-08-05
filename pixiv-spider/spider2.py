@@ -1,11 +1,12 @@
+import asyncio
+import os
 import re
 import sys
-from queue import Queue
-import aiohttp
-import asyncio
-import aiofiles
-import os
 import time
+from queue import Queue
+
+import aiofiles
+import aiohttp
 
 headers = {
     "user-agent":
@@ -106,10 +107,12 @@ class Pixiv:
             url = origin.group(1)
         except AttributeError as e:
             urls = await self._get_manga_urls(id)
-            return urls, "https://www.pixiv.net/member_illust.php?mode=medium&illust_id=" + str(id)
+            return urls, "https://www.pixiv.net/member_illust.php?mode=medium&illust_id=" + str(
+                id)
             pass
         else:
-            return url, "https://www.pixiv.net/member_illust.php?mode=medium&illust_id=" + str(id)
+            return url, "https://www.pixiv.net/member_illust.php?mode=medium&illust_id=" + str(
+                id)
 
     async def down_binary(self, url, referer):
         print(referer)
@@ -117,7 +120,8 @@ class Pixiv:
         try:
             async with self.session.get(url, headers=headers) as r:
                 return await r.content.read()
-        except aiohttp.ServerDisconnectedError as e:
+        except (aiohttp.ServerDisconnectedError, TypeError,
+                AttributeError) as e:
             print(e)
             pass
 

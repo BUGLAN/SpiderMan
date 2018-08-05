@@ -36,8 +36,6 @@ class PixivSpider:
 
     def _get_id(self):
         r = self.d.down_html(self.base_url)
-        key = re.search(r'<input type="hidden" name="post_key" value="(.*?)">',
-                        r.text).group(1)
         return key
 
     def login_in(self):
@@ -174,7 +172,7 @@ def main(p=1):
 if __name__ == '__main__':
     f = open('error.txt', 'a')
     t0 = time.time()
-    spider = PixivSpider(username='buglan', password='ls52674364')
+    spider = PixivSpider(username='username', password='password')
     spider.login_in()
     with futures.ThreadPoolExecutor(max_workers=20) as executor:
         executor.map(main, range(1, 11))
