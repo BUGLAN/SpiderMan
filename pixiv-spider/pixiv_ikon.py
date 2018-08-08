@@ -6,6 +6,7 @@ import threading
 import time
 from collections import namedtuple
 from queue import Queue
+from functools import wraps
 
 import requests
 
@@ -20,6 +21,26 @@ HEADERS = {
 
 Msg = namedtuple('Msg', ['title', 'illust_url'])
 Referer = namedtuple('Referer', ['referer', 'img_url'])
+
+
+def repeat(num):
+    index = 1
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            nonlocal index
+            try:
+                result = func(*args, **kwargs)
+                return result
+            except Exception as e:
+                if index > num:
+                    raise Exception(f'internet error repeat max conunt {num}')
+                else:
+                    index += 1
+                    return wrapper(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 class DownThread(threading.Thread):
@@ -46,12 +67,14 @@ class PixivSpider:
     def __init__(self, username, password):
         self.username, self.password = username, password
 
+    @repeat(3)
     def _get_post_key(self) -> str:
         r = self.session.get(self.login_url, headers=HEADERS)
         key = re.search(r'<input type="hidden" name="post_key" value="(.*?)">',
                         r.text).group(1)
         return key
 
+    @repeat(3)
     def _login(self) -> None:
         key = self._get_post_key()
         r = self.session.post(
@@ -72,6 +95,7 @@ class PixivSpider:
         else:
             raise Exception('网络错误')
 
+    @repeat(3)
     def _get_tt(self) -> str:
         r = self.session.get(
             self.req_url,
@@ -83,6 +107,7 @@ class PixivSpider:
         tt = re.search(r'pixiv.context.token = "(.*?)";', r.text).group(1)
         return tt
 
+    @repeat(3)
     def get_html_urls(self, p: int) -> dict:
         tt = self._get_tt()
         r = self.session.get(
@@ -96,11 +121,13 @@ class PixivSpider:
             })
         return r.json()
 
+    @repeat(3)
     def get_img_url(self, page_url: str):
         r = self.session.get(page_url, headers=HEADERS)
         img_url = re.search(r'"original":"(.*?)"', r.text).group(1)
         return Referer(referer=page_url, img_url=img_url)
 
+    @repeat(3)
     def down_url(self, img_url, referer):
         url = img_url.replace('\\', '')
         print(f'dowonlad {url}')
